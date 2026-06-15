@@ -19,8 +19,12 @@ async function ensureDataDir(): Promise<void> {
 
 export async function saveToMemory(record: SeriesRecord): Promise<void> {
   store.set(record.id, record);
-  await ensureDataDir();
-  await writeFile(getFilePath(record.id), JSON.stringify(record), "utf-8");
+  try {
+    await ensureDataDir();
+    await writeFile(getFilePath(record.id), JSON.stringify(record), "utf-8");
+  } catch (error) {
+    console.warn("Could not persist series to disk (using in-memory only):", error);
+  }
 }
 
 export async function getFromMemory(id: string): Promise<SeriesRecord | null> {

@@ -1,7 +1,11 @@
 import { mkdir, readFile, writeFile, rename } from "fs/promises";
 import { join } from "path";
+import { tmpdir } from "os";
 
-const POSTER_DIR = join(process.cwd(), ".data", "posters");
+const isVercel = process.env.VERCEL === "1";
+const POSTER_DIR = isVercel
+  ? join(tmpdir(), "netflixify-posters")
+  : join(process.cwd(), ".data", "posters");
 
 function safeId(id: string): string {
   const cleaned = id.replace(/[^a-zA-Z0-9-]/g, "");
@@ -20,9 +24,18 @@ export function getPosterApiPath(id: string): string {
 }
 
 export async function savePoster(id: string, data: Buffer): Promise<string> {
-  await mkdir(POSTER_DIR, { recursive: true });
-  await writeFile(getPosterPath(id), data);
-  return getPosterApiPath(id);
+  if (isVercel) {
+    return `data:image/png;base64,${data.toString("base64")}`;
+  }
+
+  try {
+    await mkdir(POSTER_DIR, { recursive: true });
+    await writeFile(getPosterPath(id), data);
+    return getPosterApiPath(id);
+  } catch (error) {
+    console.warn("Could not save poster to disk, using inline image:", error);
+    return `data:image/png;base64,${data.toString("base64")}`;
+  }
 }
 
 export async function movePoster(fromId: string, toId: string): Promise<string> {

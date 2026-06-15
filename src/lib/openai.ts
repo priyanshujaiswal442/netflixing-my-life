@@ -7,7 +7,8 @@ const openai = new OpenAI({
 });
 
 const REQUIRED_EPISODES = 8;
-const MAX_GENERATION_ATTEMPTS = 3;
+const MAX_GENERATION_ATTEMPTS = process.env.VERCEL ? 2 : 3;
+const SERIES_MODEL = process.env.VERCEL ? "gpt-4o-mini" : "gpt-4o";
 
 const SERIES_SCHEMA = `{
   "title": "string - creative, memorable series title",
@@ -164,7 +165,7 @@ async function requestJsonCompletion(
   maxTokens = 8192
 ): Promise<string> {
   const response = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: SERIES_MODEL,
     messages,
     temperature: 0.85,
     max_tokens: maxTokens,

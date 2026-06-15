@@ -10,11 +10,13 @@ import type { SeriesData } from "@/types";
 interface SeriesHeroProps {
   series: SeriesData;
   onPlayTrailer: () => void;
+  posterLoading?: boolean;
 }
 
-export function SeriesHero({ series, onPlayTrailer }: SeriesHeroProps) {
+export function SeriesHero({ series, onPlayTrailer, posterLoading }: SeriesHeroProps) {
   const posterUrl = series.posterUrl;
-  const isLocalPoster = posterUrl?.startsWith("/api/") ?? false;
+  const isLocalPoster =
+    posterUrl?.startsWith("/api/") || posterUrl?.startsWith("data:") || false;
 
   return (
     <section className="relative min-h-[70vh] lg:min-h-[85vh]" aria-label="Series hero">
@@ -59,8 +61,13 @@ export function SeriesHero({ series, onPlayTrailer }: SeriesHeroProps) {
                   unoptimized={isLocalPoster}
                 />
               ) : (
-                <div className="flex h-full items-center justify-center bg-gradient-to-br from-red-950 to-card">
+                <div className="flex h-full flex-col items-center justify-center bg-gradient-to-br from-red-950 to-card">
                   <span className="text-4xl font-bold text-primary/50">N</span>
+                  {posterLoading && (
+                    <p className="mt-3 px-4 text-center text-xs text-muted">
+                      Generating poster...
+                    </p>
+                  )}
                 </div>
               )}
             </div>

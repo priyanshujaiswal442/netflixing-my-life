@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSeriesById } from "@/lib/supabase";
-import { getFromMemory } from "@/lib/memory-store";
+import { loadSeriesRecord } from "@/lib/series-store";
 
 export async function GET(
   request: NextRequest,
@@ -12,10 +11,7 @@ export async function GET(
     return NextResponse.json({ error: "ID required" }, { status: 400 });
   }
 
-  let record = await getSeriesById(id);
-  if (!record) {
-    record = await getFromMemory(id);
-  }
+  const record = await loadSeriesRecord(id);
 
   if (!record) {
     return NextResponse.json({ error: "Series not found" }, { status: 404 });

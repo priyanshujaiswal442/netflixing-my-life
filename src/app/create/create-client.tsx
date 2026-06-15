@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { QUESTIONS } from "@/lib/constants";
+import { cacheSeriesRecord } from "@/lib/series-cache";
 import type { UserAnswers } from "@/types";
 
 const initialAnswers: UserAnswers = {
@@ -75,9 +76,22 @@ export function CreatePage() {
       }
 
       const data = await response.json();
+
+      cacheSeriesRecord({
+        id: data.id,
+        created_at: new Date().toISOString(),
+        answers,
+        series: data.series,
+      });
+
       router.push(`/series/${data.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      const friendlyMessage =
+        message === "Load failed" || message === "Failed to fetch"
+          ? "The request timed out or failed. Please try again — generation can take up to 2 minutes."
+          : message;
+      setError(friendlyMessage);
       setIsGenerating(false);
     }
   }, [answers, canProceed, router]);
@@ -122,7 +136,7 @@ export function CreatePage() {
             <Progress value={75} className="h-1" />
           </div>
           <p className="mt-4 text-sm text-muted">
-            This usually takes 30–60 seconds
+            This usually takes 30–90 seconds
           </p>
         </motion.div>
       </div>

@@ -65,3 +65,41 @@ export async function getSeriesById(id: string): Promise<SeriesRecord | null> {
 
   return data as SeriesRecord;
 }
+
+export async function updateSeriesPoster(
+  id: string,
+  posterUrl: string
+): Promise<SeriesRecord | null> {
+  const supabase = createServerClient();
+  if (!supabase) return null;
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("series")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !existing) {
+    return null;
+  }
+
+  const record = existing as SeriesRecord;
+  const updatedSeries = { ...record.series, posterUrl };
+
+  const { data, error } = await supabase
+    .from("series")
+    .update({
+      series: updatedSeries,
+      poster_url: posterUrl,
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Failed to update series poster:", error);
+    return null;
+  }
+
+  return data as SeriesRecord;
+}

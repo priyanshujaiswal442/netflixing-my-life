@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateSeries, generatePosterImage } from "@/lib/openai";
+import { generateSeries } from "@/lib/openai";
 import { saveSeries } from "@/lib/supabase";
+import { saveSeriesRecord } from "@/lib/series-store";
 import type { UserAnswers } from "@/types";
 import { randomUUID } from "crypto";
-import { saveToMemory } from "@/lib/memory-store";
 
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 function validateAnswers(answers: UserAnswers): boolean {
   const required: (keyof UserAnswers)[] = [
@@ -45,37 +45,17 @@ export async function POST(request: NextRequest) {
     const series = await generateSeries(answers);
     const recordId = randomUUID();
 
-    let posterUrl: string | null = null;
-    try {
-      posterUrl = await generatePosterImage(
-        series.posterPrompt,
-        series.title,
-        recordId
-      );
-      if (posterUrl) {
-        series.posterUrl = posterUrl;
-      }
-    } catch (error) {
-      console.error("Poster generation error:", error);
-    }
-
-    const saved = await saveSeries(
-      answers,
-      series,
-      posterUrl || undefined,
-      recordId
-    );
+    const saved = await saveSeries(answers, series, undefined, recordId);
 
     const record: import("@/types").SeriesRecord = saved ?? {
       id: recordId,
       created_at: new Date().toISOString(),
       answers,
       series,
-      poster_url: posterUrl || undefined,
     };
 
-    await saveToMemory(record);
-    return NextResponse.json({ id: record.id, series });
+    await saveSeriesRecord(record);
+    return NextResponse.json({ id: record.id, series: record.series });
   } catch (error) {
     console.error("Generation error:", error);
     const message =
