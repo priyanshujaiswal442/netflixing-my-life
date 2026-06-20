@@ -61,7 +61,7 @@ export interface SeriesData {
   reviews: Review[];
   iconicQuote: string;
   trailerNarration: string;
-  posterPrompt: string;
+  posterPrompt?: string;
   posterUrl?: string;
 }
 

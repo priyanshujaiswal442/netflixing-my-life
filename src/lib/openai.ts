@@ -1,14 +1,15 @@
 import OpenAI from "openai";
 import type { UserAnswers, SeriesData, Episode } from "@/types";
-import { savePoster } from "@/lib/poster-store";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 const REQUIRED_EPISODES = 8;
-const MAX_GENERATION_ATTEMPTS = process.env.VERCEL ? 2 : 3;
-const SERIES_MODEL = process.env.VERCEL ? "gpt-4o-mini" : "gpt-4o";
+const MAX_GENERATION_ATTEMPTS = 2;
+const SERIES_MODEL = "gpt-4o-mini";
+const SERIES_MAX_TOKENS = 6144;
+const EPISODE_FILL_MAX_TOKENS = 2048;
 
 const SERIES_SCHEMA = `{
   "title": "string - creative, memorable series title",
@@ -90,8 +91,7 @@ const SERIES_SCHEMA = `{
     }
   ],
   "iconicQuote": "string - unforgettable quote",
-  "trailerNarration": "string - 30-60 second trailer script",
-  "posterPrompt": "string - detailed cinematic poster image prompt"
+  "trailerNarration": "string - 30-60 second trailer script"
 }`;
 
 function buildPrompt(answers: UserAnswers, attempt: number): string {
@@ -162,7 +162,7 @@ function normalizeSeries(parsed: SeriesData): SeriesData {
 
 async function requestJsonCompletion(
   messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
-  maxTokens = 8192
+  maxTokens = SERIES_MAX_TOKENS
 ): Promise<string> {
   const response = await openai.chat.completions.create({
     model: SERIES_MODEL,
@@ -231,7 +231,7 @@ Return JSON in this exact shape:
 Each missing episode must have a unique number from the missing list, a cinematic title, and a 2-4 sentence summary that fits the existing story arc.`,
       },
     ],
-    4096
+    EPISODE_FILL_MAX_TOKENS
   );
 
   const parsed = JSON.parse(content) as { episodes?: Episode[] };
@@ -290,67 +290,7 @@ export async function generateSeries(answers: UserAnswers): Promise<SeriesData> 
   throw lastError ?? new Error("Failed to generate series after multiple attempts");
 }
 
-export async function generatePosterImage(
-  posterPrompt: string,
-  seriesTitle: string,
-  seriesId: string
-): Promise<string | null> {
-  const prompt = `Cinematic Netflix Original series poster for "${seriesTitle}". ${posterPrompt}. Style: photorealistic, professional movie poster lighting, dramatic composition, no text overlays, no watermarks, emotionally powerful, film grain, anamorphic lens quality. Avoid generic AI art style.`;
-
-  const models: Array<{
-    name: string;
-    options?: Partial<OpenAI.Images.ImageGenerateParams>;
-  }> = [
-    {
-      name: "gpt-image-1",
-      options: { size: "1024x1024" },
-    },
-    {
-      name: "gpt-image-1-mini",
-      options: { size: "1024x1024" },
-    },
-    {
-      name: "dall-e-3",
-      options: { size: "1024x1024", quality: "hd", style: "natural" },
-    },
-    {
-      name: "dall-e-2",
-      options: { size: "1024x1024" },
-    },
-  ];
-
-  for (const { name, options } of models) {
-    try {
-      const response = await openai.images.generate({
-        model: name,
-        prompt,
-        n: 1,
-        ...options,
-      });
-
-      const item = response.data?.[0];
-      if (!item) continue;
-
-      let imageBuffer: Buffer | null = null;
-
-      if (item.b64_json) {
-        imageBuffer = Buffer.from(item.b64_json, "base64");
-      } else if (item.url) {
-        const imageResponse = await fetch(item.url);
-        if (imageResponse.ok) {
-          imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
-        }
-      }
-
-      if (imageBuffer) {
-        return await savePoster(seriesId, imageBuffer);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.warn(`Poster generation with ${name} failed:`, message);
-    }
-  }
-
-  console.error("Poster generation failed with all image models");
+/** Poster generation is disabled to reduce OpenAI image API costs. */
+export async function generatePosterImage(): Promise<string | null> {
   return null;
 }

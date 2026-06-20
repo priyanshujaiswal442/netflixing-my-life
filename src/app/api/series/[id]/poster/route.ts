@@ -29,17 +29,13 @@ export async function POST(
       });
     }
 
-    const posterUrl = await generatePosterImage(
-      record.series.posterPrompt,
-      record.series.title,
-      id
-    );
+    const posterUrl = await generatePosterImage();
 
     if (!posterUrl) {
-      return NextResponse.json(
-        { error: "Failed to generate poster" },
-        { status: 500 }
-      );
+      return NextResponse.json({
+        posterUrl: null,
+        disabled: true,
+      });
     }
 
     const updated = await updateSeriesRecordPoster(id, posterUrl);

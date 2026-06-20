@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { Header } from "@/components/layout/header";
@@ -38,10 +38,8 @@ export function SeriesPageClient({ id, initialRecord }: SeriesPageClientProps) {
     initialRecord ?? null
   );
   const [loading, setLoading] = useState(!initialRecord);
-  const [posterLoading, setPosterLoading] = useState(false);
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const posterRequested = useRef(false);
 
   useEffect(() => {
     if (initialRecord) return;
@@ -71,42 +69,6 @@ export function SeriesPageClient({ id, initialRecord }: SeriesPageClientProps) {
         setLoading(false);
       });
   }, [id, initialRecord]);
-
-  useEffect(() => {
-    if (!record || posterRequested.current) return;
-
-    const posterUrl = record.series.posterUrl || record.poster_url;
-    if (posterUrl) return;
-
-    posterRequested.current = true;
-    let cancelled = false;
-    setPosterLoading(true);
-
-    fetch(`/api/series/${id}/poster`, { method: "POST" })
-      .then(async (response) => {
-        if (!response.ok) return null;
-        return response.json() as Promise<{ posterUrl?: string; record?: SeriesRecord }>;
-      })
-      .then((data) => {
-        if (cancelled || !data?.posterUrl) return;
-
-        const updated: SeriesRecord = data.record ?? {
-          ...record,
-          series: { ...record.series, posterUrl: data.posterUrl },
-          poster_url: data.posterUrl,
-        };
-
-        setRecord(updated);
-        updateCachedSeriesRecord(updated);
-      })
-      .finally(() => {
-        if (!cancelled) setPosterLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [id, record]);
 
   if (loading) {
     return (
@@ -138,7 +100,6 @@ export function SeriesPageClient({ id, initialRecord }: SeriesPageClientProps) {
       <SeriesHero
         series={series}
         onPlayTrailer={() => setTrailerOpen(true)}
-        posterLoading={posterLoading}
       />
       <SharePanel series={series} seriesId={record.id} />
 
